@@ -133,13 +133,13 @@ Open your browser and navigate to: `http://localhost:18007`
 
 ### Backend
 ```bash
-cd d:\worktest\webtotp
+cd \workspace\webtotp
 cargo build --release
 ```
 
 ### Frontend
 ```bash
-cd d:\worktest\webtotp\frontend
+cd \workspace\webtotp\frontend
 npm install
 npm run build
 ```
