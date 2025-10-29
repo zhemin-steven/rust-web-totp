@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web TOTP - 2FA 管理工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 解锁页面 -->
+    <div id="unlock-page" class="page unlock-page">
+        <div class="container">
+            <div class="card unlock-card">
+                <div class="language-selector">
+                    <button class="lang-toggle" onclick="toggleLangMenu(event)" type="button" title="Language / 语言">🌐</button>
+                    <div class="lang-menu" id="lang-menu">
+                        <button onclick="window.setLanguage('zh-CN'); hideLangMenu();" class="lang-option active" id="lang-opt-zh" type="button">🇨🇳 中文</button>
+                        <button onclick="window.setLanguage('en-US'); hideLangMenu();" class="lang-option" id="lang-opt-en" type="button">🇺🇸 English</button>
+                    </div>
+                </div>
+                <div class="unlock-icon">🔒</div>
+                <h1 data-i18n="app_title">Web TOTP</h1>
+                <p class="subtitle" data-i18n="unlock_title">数据库已加密</p>
+                <p class="unlock-hint" data-i18n="unlock_hint">请输入主密码解锁</p>
+                <form id="unlock-form">
+                    <div class="form-group">
+                        <label for="master-password" data-i18n="master_password">主密码</label>
+                        <input type="password" id="master-password" name="master-password" 
+                               placeholder="Enter master password" required autofocus>
+                    </div>
+                    <div id="unlock-error" class="error-message"></div>
+                    <button type="submit" class="btn btn-primary btn-unlock" data-i18n="unlock_button">Unlock</button>
+                </form>
+                <p class="unlock-info" data-i18n="unlock_first_time">
+                    💡 首次使用？输入一个新密码来创建数据库
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登录页面 -->
+    <div id="login-page" class="page" style="display: none;">
+        <div class="container">
+            <div class="card">
+                <div class="language-selector">
+                    <button class="lang-toggle" onclick="toggleLangMenu(event)" type="button" title="Language / 语言">🌐</button>
+                    <div class="lang-menu" id="lang-menu-login">
+                        <button onclick="window.setLanguage('zh-CN'); hideLangMenu();" class="lang-option active" id="lang-opt-zh-login" type="button">🇨🇳 中文</button>
+                        <button onclick="window.setLanguage('en-US'); hideLangMenu();" class="lang-option" id="lang-opt-en-login" type="button">🇺🇸 English</button>
+                    </div>
+                </div>
+                <div class="logo-container">
+                    <div class="logo-shield">🛡️</div>
+                    <h1>Web TOTP</h1>
+                </div>
+                <p class="subtitle" data-i18n="app_subtitle">安全的双因素认证管理工具</p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username" data-i18n="username">用户名</label>
+                        <input type="text" id="username" name="username" value="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" data-i18n="password">密码</label>
+                        <input type="password" id="password" name="password" value="admin" required>
+                    </div>
+                    <div id="totp-input-group" class="form-group" style="display: none;">
+                        <label for="totp-code" data-i18n="totp_code">2FA 验证码</label>
+                        <input type="text" id="totp-code" name="totp-code" maxlength="6" pattern="\d{6}">
+                    </div>
+                    <div id="login-error" class="error-message"></div>
+                    <button type="submit" class="btn btn-primary" data-i18n="login_button">登录</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主页面 -->
+    <div id="main-page" class="page" style="display: none;">
+        <nav class="navbar">
+            <div class="nav-content">
+                <h2>Web TOTP</h2>
+                <div class="nav-links">
+                    <a href="#" class="nav-link active" data-tab="totp-list" data-i18n="totp_list">2FA 列表</a>
+                    <a href="#" class="nav-link" data-tab="settings" data-i18n="settings">设置</a>
+                    <div class="language-selector nav-lang-selector">
+                        <button class="lang-toggle" onclick="toggleLangMenu(event)" type="button" title="Language / 语言">🌐</button>
+                        <div class="lang-menu" id="lang-menu-main">
+                            <button onclick="window.setLanguage('zh-CN'); hideLangMenu();" class="lang-option active" id="lang-opt-zh-main" type="button">🇨🇳 中文</button>
+                            <button onclick="window.setLanguage('en-US'); hideLangMenu();" class="lang-option" id="lang-opt-en-main" type="button">🇺🇸 English</button>
+                        </div>
+                    </div>
+                    <button id="logout-btn" class="btn btn-secondary" data-i18n="logout">退出</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container main-content">
+            <!-- 2FA 列表标签页 -->
+            <div id="totp-list-tab" class="tab-content active">
+                <div class="header-actions">
+                    <h2 data-i18n="totp_list">2FA 列表</h2>
+                    <button id="add-totp-btn" class="btn btn-primary" data-i18n="add_totp">+ 添加 2FA</button>
+                </div>
+                
+                <div id="totp-entries" class="totp-grid">
+                    <!-- TOTP entries will be dynamically loaded here -->
+                </div>
+
+                <div id="empty-state" class="empty-state">
+                    <p data-i18n="no_entries">暂无 2FA 条目</p>
+                    <p class="subtitle" data-i18n="click_add">点击上方"添加 2FA"按钮开始</p>
+                </div>
+            </div>
+
+            <!-- 设置标签页 -->
+            <div id="settings-tab" class="tab-content">
+                <h2 data-i18n="settings">设置</h2>
+                
+                <div class="settings-section">
+                    <h3 data-i18n="change_password_title">修改密码</h3>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label for="old-password" data-i18n="old_password">当前密码</label>
+                            <input type="password" id="old-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password" data-i18n="new_password">新密码</label>
+                            <input type="password" id="new-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password" data-i18n="confirm_password">确认新密码</label>
+                            <input type="password" id="confirm-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" data-i18n="change_password_button">更改密码</button>
+                    </form>
+                </div>
+
+                <div class="settings-section">
+                    <h3 data-i18n="two_factor_auth">两步验证</h3>
+                    <p data-i18n="enable_2fa_desc">为此工具启用两步验证以增强安全性</p>
+                    <div id="2fa-status" class="status-display">
+                        <span id="2fa-status-text"><span data-i18n="status">状态</span>: <span id="2fa-status-value" data-i18n="disabled">未启用</span></span>
+                        <button id="toggle-2fa-btn" class="btn btn-primary" data-i18n="enable_2fa">启用 2FA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加 TOTP 模态框 -->
+    <div id="add-totp-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="add_totp_title">添加 2FA</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="add-totp-form">
+                <div class="form-group">
+                    <label for="entry-name" data-i18n="entry_name">名称</label>
+                    <input type="text" id="entry-name" data-i18n-placeholder="name_placeholder" placeholder="例如: Google" required>
+                </div>
+                <div class="form-group">
+                    <label for="entry-issuer" data-i18n="entry_issuer">发行者</label>
+                    <input type="text" id="entry-issuer" data-i18n-placeholder="issuer_placeholder" placeholder="例如: Google" required>
+                </div>
+                <div class="form-group">
+                    <label for="entry-secret" data-i18n="entry_secret">密钥</label>
+                    <input type="text" id="entry-secret" data-i18n-placeholder="secret_placeholder" placeholder="输入密钥" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary cancel-btn" data-i18n="cancel">取消</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="add">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2FA 设置模态框 -->
+    <div id="2fa-setup-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>启用两步验证</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div id="2fa-setup-content">
+                <p>使用 Google Authenticator 或其他 2FA 应用扫描此二维码：</p>
+                <div class="qr-code-container">
+                    <img id="2fa-qr-code" src="" alt="QR Code">
+                </div>
+                <div class="form-group">
+                    <label>或手动输入密钥:</label>
+                    <input type="text" id="2fa-secret-display" readonly>
+                </div>
+                <form id="verify-2fa-form">
+                    <div class="form-group">
+                        <label for="verify-code">输入验证码以确认:</label>
+                        <input type="text" id="verify-code" maxlength="6" pattern="\d{6}" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                        <button type="submit" class="btn btn-primary">验证并启用</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>确认删除</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <p>确定要删除这个 2FA 条目吗？此操作无法撤销。</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                <button type="button" id="confirm-delete-btn" class="btn btn-danger">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 禁用 2FA 确认模态框 -->
+    <div id="disable-2fa-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>禁用两步验证</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <p>禁用两步验证需要验证您的身份</p>
+            <form id="disable-2fa-form">
+                <div class="form-group">
+                    <label for="disable-2fa-password">当前密码</label>
+                    <input type="password" id="disable-2fa-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="disable-2fa-code">当前 2FA 验证码</label>
+                    <input type="text" id="disable-2fa-code" maxlength="6" pattern="\d{6}" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                    <button type="submit" class="btn btn-danger">确认禁用</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
